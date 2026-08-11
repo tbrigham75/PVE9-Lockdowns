@@ -6,19 +6,21 @@ The role is conservative: `proxmox_lockdowns_enable` defaults to `false`; SSH, f
 
 ## Authoritative source
 
-Implementation source: HomeSecExplorer, **“Proxmox VE 9.x Hardening Guide,” Version 0.9.2 - February 09, 2026**:
+This role is derived from **“Proxmox VE 9.x Hardening Guide,” Version 0.9.2 - February 09, 2026**, authored by [HomeSecExplorer](https://github.com/HomeSecExplorer).
 
-- Rendered: <https://github.com/HomeSecExplorer/Proxmox-Hardening-Guide/blob/main/docs/pve9-hardening-guide.md>
-- Raw: <https://raw.githubusercontent.com/HomeSecExplorer/Proxmox-Hardening-Guide/main/docs/pve9-hardening-guide.md>
+- Local source snapshot: [`source-pve9-lockdown-guide.md`](source-pve9-lockdown-guide.md)
+- Upstream rendered guide: <https://github.com/HomeSecExplorer/Proxmox-Hardening-Guide/blob/main/docs/pve9-hardening-guide.md>
+- Upstream raw guide used for the snapshot: <https://raw.githubusercontent.com/HomeSecExplorer/Proxmox-Hardening-Guide/main/docs/pve9-hardening-guide.md>
+- Upstream license: [CC BY 4.0](https://github.com/HomeSecExplorer/Proxmox-Hardening-Guide/blob/main/LICENSE)
 
 The complete 1,948-line raw guide was reviewed. Controls 1.1.7 and 1.1.8 are present in the body but absent from its table of contents; both are mapped below. Extra sysctl values and safety assertions are labeled implementation safeguards, not guide requirements.
 
 ## Installation
 
 ```bash
-ansible-galaxy collection install -r proxmox_lockdowns/requirements.yml
 mkdir -p roles
-cp -a proxmox_lockdowns roles/proxmox_lockdowns
+git clone https://github.com/tbrigham75/PVE9-Lockdowns.git roles/proxmox_lockdowns
+ansible-galaxy collection install -r roles/proxmox_lockdowns/requirements.yml
 ```
 
 Version 2.0.0 is a breaking rename: use role `proxmox_lockdowns` and variables `proxmox_lockdowns_*`; the former identity and namespace are not aliases.

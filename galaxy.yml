@@ -13,4 +13,4 @@ tags:
   - debian
   - security
   - lockdown
-repository: https://github.com/HomeSecExplorer/Proxmox-Hardening-Guide
+repository: https://github.com/tbrigham75/PVE9-Lockdowns

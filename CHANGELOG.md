@@ -5,6 +5,7 @@
 - Breaking rename: role identity and directory changed to `proxmox_lockdowns`.
 - Breaking rename: all public variables now use the `proxmox_lockdowns_*` namespace.
 - Renamed role-managed files and examples consistently; preserved authoritative upstream guide names and URLs.
+- Flattened the Ansible role into the repository root and updated installation paths and source attribution.
 
 
 ## 1.0.0 - 2026-08-11
