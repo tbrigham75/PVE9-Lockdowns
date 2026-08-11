@@ -1,0 +1,16 @@
+# {{ proxmox_lockdowns_managed_marker }}
+# WARNING: this file is an explicit full-policy takeover.
+[OPTIONS]
+enable: {{ proxmox_lockdowns_firewall_enable | ternary(1, 0) }}
+policy_in: {{ proxmox_lockdowns_firewall_default_input_policy }}
+policy_out: {{ proxmox_lockdowns_firewall_default_output_policy }}
+policy_forward: {{ proxmox_lockdowns_firewall_default_forward_policy }}
+
+[RULES]
+{% for cidr in proxmox_lockdowns_trusted_management_networks %}
+IN ACCEPT -source {{ cidr }} -p tcp -dport {{ proxmox_lockdowns_ssh_port }} -log nolog
+IN ACCEPT -source {{ cidr }} -p tcp -dport {{ proxmox_lockdowns_pve_gui_port }} -log nolog
+{% endfor %}
+{% for rule in proxmox_lockdowns_firewall_additional_rules %}
+{{ rule }}
+{% endfor %}

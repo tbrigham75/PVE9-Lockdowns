@@ -1,0 +1,50 @@
+---
+- name: Re-run SSH configuration validation
+  ansible.builtin.command: /usr/sbin/sshd -t
+  changed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_apply_ssh | bool
+
+- name: List persistent PVE audit rule
+  ansible.builtin.command: auditctl -l
+  register: proxmox_lockdowns_audit_rules
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_apply_auditd | bool
+
+- name: Verify PVE audit watch is loaded
+  ansible.builtin.assert:
+    that:
+      - "'pve-config' in proxmox_lockdowns_audit_rules.stdout"
+    fail_msg: The persistent /etc/pve audit watch is not loaded.
+  when:
+    - proxmox_lockdowns_enable | bool
+    - proxmox_lockdowns_apply_auditd | bool
+    - not ansible_check_mode
+
+- name: Query PVE firewall status
+  ansible.builtin.command: pve-firewall status
+  register: proxmox_lockdowns_firewall_status
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_apply_firewall | bool
+
+- name: Check unattended-upgrades service
+  ansible.builtin.command: systemctl is-enabled unattended-upgrades.service
+  register: proxmox_lockdowns_unattended_enabled
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_apply_unattended_upgrades | bool
+
+- name: Emit concise verification summary
+  ansible.builtin.debug:
+    msg:
+      pve_version: "{{ proxmox_lockdowns_pveversion.stdout }}"
+      clustered: "{{ proxmox_lockdowns_is_clustered }}"
+      ceph_detected: "{{ proxmox_lockdowns_ceph_conf.stat.exists }}"
+      firewall: "{{ proxmox_lockdowns_firewall_status.stdout | default('not managed') }}"
+      unattended_upgrades: "{{ proxmox_lockdowns_unattended_enabled.stdout | default('not managed') }}"
+      check_mode: "{{ ansible_check_mode }}"

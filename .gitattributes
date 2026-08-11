@@ -1,0 +1,8 @@
+* text=auto
+.gitattributes text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.j2 text eol=lf
+*.ini text eol=lf
+*.md text eol=lf
+source-pve9-lockdown-guide.md whitespace=-trailing-space

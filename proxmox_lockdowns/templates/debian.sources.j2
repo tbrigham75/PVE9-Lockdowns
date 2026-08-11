@@ -1,0 +1,12 @@
+# {{ proxmox_lockdowns_managed_marker }}
+Types: deb
+URIs: {{ proxmox_lockdowns_debian_mirror }}
+Suites: trixie trixie-updates
+Components: main contrib{% if proxmox_lockdowns_enable_non_free_firmware | bool %} non-free-firmware{% endif %}
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+
+Types: deb
+URIs: {{ proxmox_lockdowns_debian_security_mirror }}
+Suites: trixie-security
+Components: main contrib{% if proxmox_lockdowns_enable_non_free_firmware | bool %} non-free-firmware{% endif %}
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg

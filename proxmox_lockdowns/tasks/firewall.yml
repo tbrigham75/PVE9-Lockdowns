@@ -1,0 +1,44 @@
+---
+- name: Reconfirm dangerous firewall policy combinations
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_firewall_default_input_policy != 'DROP' or
+        proxmox_lockdowns_trusted_management_networks | length > 0
+      - proxmox_lockdowns_firewall_default_forward_policy != 'DROP' or
+        proxmox_lockdowns_firewall_enable_nftables | bool
+    fail_msg: INPUT DROP requires management allows; FORWARD DROP requires nftables opt-in.
+
+- name: Query node firewall options
+  ansible.builtin.command: >-
+    pvesh get /nodes/{{ ansible_facts.hostname }}/firewall/options --output-format json
+  register: proxmox_lockdowns_node_firewall_options
+  changed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_firewall_enable_nftables | bool
+
+- name: Enable nftables backend on this node
+  ansible.builtin.command: >-
+    pvesh set /nodes/{{ ansible_facts.hostname }}/firewall/options --nftables 1
+  when:
+    - proxmox_lockdowns_firewall_enable_nftables | bool
+    - (proxmox_lockdowns_node_firewall_options.stdout | from_json).nftables | default(0) | int != 1
+    - not ansible_check_mode
+  changed_when: true
+
+- name: Ensure PVE firewall directory exists
+  ansible.builtin.file:
+    path: /etc/pve/firewall
+    state: directory
+    owner: root
+    group: www-data
+    mode: '0750'
+
+- name: Take over cluster firewall policy
+  ansible.builtin.template:
+    src: cluster.fw.j2
+    dest: /etc/pve/firewall/cluster.fw
+    owner: root
+    group: www-data
+    mode: '0640'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  notify: Reload PVE firewall

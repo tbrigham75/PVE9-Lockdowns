@@ -1,0 +1,134 @@
+---
+- name: Install fail2ban
+  ansible.builtin.apt:
+    name: fail2ban
+    state: present
+  when: proxmox_lockdowns_apply_fail2ban | bool
+
+- name: Install PVE fail2ban filter
+  ansible.builtin.template:
+    src: fail2ban_proxmox_filter.conf.j2
+    dest: /etc/fail2ban/filter.d/proxmox.conf
+    owner: root
+    group: root
+    mode: '0644'
+  when: proxmox_lockdowns_apply_fail2ban | bool
+  notify: Reload fail2ban
+
+- name: Install SSH and PVE fail2ban jail
+  ansible.builtin.template:
+    src: fail2ban_proxmox_jail.local.j2
+    dest: /etc/fail2ban/jail.d/proxmox-lockdowns.local
+    owner: root
+    group: root
+    mode: '0644'
+  when: proxmox_lockdowns_apply_fail2ban | bool
+  notify: Reload fail2ban
+
+- name: Enable fail2ban
+  ansible.builtin.systemd_service:
+    name: fail2ban.service
+    enabled: true
+    state: started
+  when: proxmox_lockdowns_apply_fail2ban | bool
+
+- name: Install rkhunter
+  ansible.builtin.apt:
+    name: rkhunter
+    state: present
+  when: proxmox_lockdowns_apply_rkhunter | bool
+
+- name: Enable daily rkhunter checks
+  ansible.builtin.copy:
+    content: |
+      #!/bin/sh
+      /usr/bin/rkhunter --check --skip-keypress --report-warnings-only
+    dest: /etc/cron.daily/rkhunter-proxmox-lockdowns
+    owner: root
+    group: root
+    mode: '0750'
+  when: proxmox_lockdowns_apply_rkhunter | bool
+
+- name: Validate PBS host backup inputs
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_pbs_repository | length > 0
+      - proxmox_lockdowns_pbs_password | length > 0
+      - proxmox_lockdowns_pbs_fingerprint | length > 0
+      - not proxmox_lockdowns_pbs_encryption_enabled or
+        (proxmox_lockdowns_pbs_encryption_password | length > 0)
+    fail_msg: PBS repository, token, fingerprint, and encryption secret (if used) are required.
+  when: proxmox_lockdowns_manage_host_backup | bool
+
+- name: Install PBS client
+  ansible.builtin.apt:
+    name: proxmox-backup-client
+    state: present
+  when: proxmox_lockdowns_manage_host_backup | bool
+
+- name: Create PBS encryption key non-interactively
+  ansible.builtin.command:
+    argv:
+      - proxmox-backup-client
+      - key
+      - create
+      - "{{ proxmox_lockdowns_pbs_encryption_key_file }}"
+      - --kdf
+      - scrypt
+    creates: "{{ proxmox_lockdowns_pbs_encryption_key_file }}"
+  environment:
+    PBS_ENCRYPTION_PASSWORD: "{{ proxmox_lockdowns_pbs_encryption_password }}"
+  no_log: true
+  when:
+    - proxmox_lockdowns_manage_host_backup | bool
+    - proxmox_lockdowns_pbs_encryption_enabled | bool
+    - proxmox_lockdowns_pbs_manage_encryption_key | bool
+
+- name: Restrict PBS encryption key permissions
+  ansible.builtin.file:
+    path: "{{ proxmox_lockdowns_pbs_encryption_key_file }}"
+    owner: root
+    group: root
+    mode: '0600'
+  when:
+    - proxmox_lockdowns_manage_host_backup | bool
+    - proxmox_lockdowns_pbs_encryption_enabled | bool
+
+- name: Install PBS credential environment
+  ansible.builtin.template:
+    src: pbs-cred.j2
+    dest: /root/.pbs-cred
+    owner: root
+    group: root
+    mode: '0600'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  no_log: true
+  when: proxmox_lockdowns_manage_host_backup | bool
+
+- name: Install PBS host backup service
+  ansible.builtin.template:
+    src: pbc-host-backup.service.j2
+    dest: /etc/systemd/system/pbc-host-backup.service
+    owner: root
+    group: root
+    mode: '0644'
+  when: proxmox_lockdowns_manage_host_backup | bool
+  notify: Reload systemd
+
+- name: Install PBS host backup timer
+  ansible.builtin.template:
+    src: pbc-host-backup.timer.j2
+    dest: /etc/systemd/system/pbc-host-backup.timer
+    owner: root
+    group: root
+    mode: '0644'
+  when: proxmox_lockdowns_manage_host_backup | bool
+  notify: Reload systemd
+
+- name: Enable PBS host backup timer
+  ansible.builtin.systemd_service:
+    name: pbc-host-backup.timer
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: proxmox_lockdowns_manage_host_backup | bool

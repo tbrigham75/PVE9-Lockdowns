@@ -1,0 +1,13 @@
+# {{ proxmox_lockdowns_managed_marker }}
+[Unit]
+Description=Host-config backup to PBS
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/root/.pbs-cred
+ExecStart=/usr/bin/proxmox-backup-client backup root.pxar:/ etc.pxar:/etc --include-dev /boot{% if proxmox_lockdowns_pbs_encryption_enabled | bool %} --crypt-mode encrypt --keyfile ${PBS_ENCRYPTION_KEY_FILE}{% endif %}
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7

@@ -1,0 +1,18 @@
+# {{ proxmox_lockdowns_managed_marker }}
+[sshd]
+backend = systemd
+enabled = true
+port = {{ proxmox_lockdowns_ssh_port }}
+filter = sshd
+maxretry = {{ proxmox_lockdowns_fail2ban_maxretry }}
+findtime = {{ proxmox_lockdowns_fail2ban_findtime }}
+bantime = {{ proxmox_lockdowns_fail2ban_bantime }}
+
+[proxmox]
+enabled = true
+port = {{ proxmox_lockdowns_pve_gui_port }}
+filter = proxmox
+backend = systemd
+maxretry = {{ proxmox_lockdowns_fail2ban_maxretry }}
+findtime = {{ proxmox_lockdowns_fail2ban_findtime }}
+bantime = {{ proxmox_lockdowns_fail2ban_bantime }}

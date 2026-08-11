@@ -1,0 +1,40 @@
+---
+- name: Validate dedicated /var/lib/vz mount inputs
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_vz_mount_source | length > 0
+      - "'noexec' not in proxmox_lockdowns_vz_mount_options.split(',')"
+      - "'nodev' in proxmox_lockdowns_vz_mount_options.split(',')"
+      - "'nosuid' in proxmox_lockdowns_vz_mount_options.split(',')"
+    fail_msg: >-
+      A pre-created block device and nodev,nosuid options are required; noexec is prohibited
+      because PVE hooks and maintenance tooling can execute from /var/lib/vz.
+  when: proxmox_lockdowns_manage_vz_mount | bool
+
+- name: Ensure /var/lib/vz exists
+  ansible.builtin.file:
+    path: /var/lib/vz
+    state: directory
+    owner: root
+    group: root
+    mode: '0755'
+  when: proxmox_lockdowns_manage_vz_mount | bool
+
+- name: Persist dedicated /var/lib/vz filesystem without mounting it
+  ansible.posix.mount:
+    path: /var/lib/vz
+    src: "{{ proxmox_lockdowns_vz_mount_source }}"
+    fstype: "{{ proxmox_lockdowns_vz_mount_fstype }}"
+    opts: "{{ proxmox_lockdowns_vz_mount_options }}"
+    dump: '0'
+    passno: '2'
+    state: present
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when: proxmox_lockdowns_manage_vz_mount | bool
+
+- name: Explain mount activation safety boundary
+  ansible.builtin.debug:
+    msg: >-
+      The fstab entry was managed, but the role does not mount /var/lib/vz or create/format
+      storage. Migrate data and activate the mount during an approved maintenance window.
+  when: proxmox_lockdowns_manage_vz_mount | bool

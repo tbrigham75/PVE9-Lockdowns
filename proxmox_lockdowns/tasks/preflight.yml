@@ -1,0 +1,105 @@
+---
+- name: Require privilege escalation
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.user_id == 'root'
+    fail_msg: This role must run with become true (root).
+
+- name: Validate supported Debian platform
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.distribution == proxmox_lockdowns_supported_distribution
+      - ansible_facts.distribution_major_version == proxmox_lockdowns_supported_major_version
+      - ansible_facts.distribution_release == proxmox_lockdowns_supported_codename
+      - ansible_facts.architecture in ['x86_64', 'amd64']
+    fail_msg: This role supports only Proxmox VE 9 on Debian 13 trixie x86-64.
+
+- name: Query Proxmox VE version
+  ansible.builtin.command: pveversion
+  register: proxmox_lockdowns_pveversion
+  changed_when: false
+  check_mode: false
+
+- name: Require Proxmox VE 9
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_pveversion.rc == 0
+      - proxmox_lockdowns_pveversion.stdout is regex('^pve-manager/9\\.')
+    fail_msg: >-
+      pveversion did not report pve-manager/9.x. PVE 8 and non-PVE Debian are unsupported.
+
+- name: Detect cluster membership
+  ansible.builtin.stat:
+    path: /etc/pve/corosync.conf
+  register: proxmox_lockdowns_corosync_conf
+
+- name: Derive effective cluster mode
+  ansible.builtin.set_fact:
+    proxmox_lockdowns_is_clustered: >-
+      {{ (proxmox_lockdowns_cluster_mode == 'cluster') or
+         (proxmox_lockdowns_cluster_mode == 'auto' and proxmox_lockdowns_corosync_conf.stat.exists) }}
+
+- name: Validate cluster mode declaration
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_cluster_mode in ['auto', 'standalone', 'cluster']
+      - not (proxmox_lockdowns_cluster_mode == 'standalone' and proxmox_lockdowns_corosync_conf.stat.exists)
+    fail_msg: cluster_mode=standalone conflicts with detected /etc/pve/corosync.conf.
+
+- name: Detect Ceph configuration
+  ansible.builtin.stat:
+    path: /etc/ceph/ceph.conf
+  register: proxmox_lockdowns_ceph_conf
+
+- name: Detect systemd environment
+  ansible.builtin.assert:
+    that:
+      - ansible_facts.service_mgr == 'systemd'
+    fail_msg: Proxmox VE 9 requires systemd; the gathered service manager differs.
+
+- name: Validate enumerated safety variables
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_reboot_policy in ['never', 'notify']
+      - proxmox_lockdowns_repository_subscription in ['none', 'enterprise', 'no-subscription']
+      - proxmox_lockdowns_kernel_lockdown_mode in ['integrity']
+      - proxmox_lockdowns_ksm_policy in ['unchanged', 'disable']
+      - proxmox_lockdowns_certificate_mode in ['none', 'files', 'acme']
+      - proxmox_lockdowns_firewall_default_input_policy in ['ACCEPT', 'DROP', 'REJECT']
+      - proxmox_lockdowns_firewall_default_output_policy in ['ACCEPT', 'DROP', 'REJECT']
+      - proxmox_lockdowns_firewall_default_forward_policy in ['ACCEPT', 'DROP', 'REJECT']
+
+- name: Validate firewall lockout prevention
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_firewall_takeover | bool
+      - proxmox_lockdowns_firewall_enable | bool
+      - proxmox_lockdowns_trusted_management_networks | length > 0
+      - proxmox_lockdowns_ssh_port | int > 0
+      - proxmox_lockdowns_pve_gui_port | int > 0
+    fail_msg: >-
+      Firewall application requires takeover=true, enable=true, and at least one trusted
+      management CIDR. Console/OOB access must be available.
+  when: proxmox_lockdowns_apply_firewall | bool
+
+- name: Protect clustered root SSH requirements
+  ansible.builtin.assert:
+    that:
+      - not (proxmox_lockdowns_ssh_permit_root_login == 'no' and
+             proxmox_lockdowns_root_match_management_networks | length == 0)
+      - not (proxmox_lockdowns_ssh_disable_forwarding | bool and
+             proxmox_lockdowns_cluster_ssh_networks | length == 0)
+    fail_msg: >-
+      Clustered PVE requires root SSH and TCP forwarding for internal workflows; supply
+      Match-address networks before restricting either globally.
+  when:
+    - proxmox_lockdowns_apply_ssh | bool
+    - proxmox_lockdowns_is_clustered | bool
+
+- name: Validate Ceph opt-in and detection
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_ceph_enabled | bool
+      - proxmox_lockdowns_ceph_conf.stat.exists
+    fail_msg: Ceph changes require ceph_enabled=true and an existing /etc/ceph/ceph.conf.
+  when: proxmox_lockdowns_apply_ceph | bool

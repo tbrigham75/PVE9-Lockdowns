@@ -1,0 +1,5 @@
+# {{ proxmox_lockdowns_managed_marker }}
+# Guide control 1.3.6; opt-in because forwarding changes can break routed workloads.
+{% for key, value in proxmox_lockdowns_sdn_sysctl_values | dictsort %}
+{{ key }} = {{ value }}
+{% endfor %}

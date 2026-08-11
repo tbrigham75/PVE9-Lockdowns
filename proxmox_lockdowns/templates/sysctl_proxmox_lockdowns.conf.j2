@@ -1,0 +1,5 @@
+# {{ proxmox_lockdowns_managed_marker }}
+# Implementation safety baseline; values outside guide 1.3.6 are additional safeguards.
+{% for key, value in proxmox_lockdowns_sysctl_values | dictsort %}
+{{ key }} = {{ value }}
+{% endfor %}

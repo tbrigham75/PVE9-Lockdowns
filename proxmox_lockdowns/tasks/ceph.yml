@@ -1,0 +1,90 @@
+---
+- name: Validate declared Ceph networks against existing configuration
+  ansible.builtin.command: ceph config dump --format json
+  register: proxmox_lockdowns_ceph_config_dump
+  changed_when: false
+  check_mode: false
+
+- name: Require explicit Ceph network assumptions
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_ceph_expected_public_network | length > 0
+      - proxmox_lockdowns_ceph_expected_cluster_network | length > 0
+    fail_msg: Ceph changes require explicit expected public and cluster network CIDRs.
+  when: proxmox_lockdowns_ceph_manage_messenger_encryption | bool
+
+- name: Read effective Ceph public network
+  ansible.builtin.command: ceph config get mon public_network
+  register: proxmox_lockdowns_ceph_public_network
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_ceph_manage_messenger_encryption | bool
+
+- name: Read effective Ceph cluster network
+  ansible.builtin.command: ceph config get osd cluster_network
+  register: proxmox_lockdowns_ceph_cluster_network
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_ceph_manage_messenger_encryption | bool
+
+- name: Validate discovered Ceph networks against operator assumptions
+  ansible.builtin.assert:
+    that:
+      - >-
+        proxmox_lockdowns_ceph_public_network.stdout | trim == '' or
+        proxmox_lockdowns_ceph_expected_public_network in
+        (proxmox_lockdowns_ceph_public_network.stdout | trim).split(',')
+      - >-
+        proxmox_lockdowns_ceph_cluster_network.stdout | trim == '' or
+        proxmox_lockdowns_ceph_expected_cluster_network in
+        (proxmox_lockdowns_ceph_cluster_network.stdout | trim).split(',')
+    fail_msg: >-
+      Effective Ceph networks do not match expected public/cluster CIDRs. Stop and reconcile
+      topology before enabling Messenger secure mode.
+  when: proxmox_lockdowns_ceph_manage_messenger_encryption | bool
+
+- name: Configure Ceph Messenger v2 secure modes
+  community.general.ini_file:
+    path: /etc/ceph/ceph.conf
+    section: global
+    option: "{{ item.key }}"
+    value: "{{ item.value }}"
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ proxmox_lockdowns_backup }}"
+    no_extra_spaces: true
+  loop:
+    - {key: auth_client_required, value: cephx}
+    - {key: auth_cluster_required, value: cephx}
+    - {key: auth_service_required, value: cephx}
+    - {key: ms_bind_msgr2, value: 'true'}
+    - {key: ms_encrypt, value: 'true'}
+    - {key: ms_cluster_mode, value: secure}
+    - {key: ms_service_mode, value: secure}
+    - {key: ms_client_mode, value: secure}
+    - {key: ms_mon_client_mode, value: secure}
+    - {key: ms_mon_cluster_mode, value: secure}
+    - {key: ms_mon_service_mode, value: secure}
+  when: proxmox_lockdowns_ceph_manage_messenger_encryption | bool
+  notify: Restart Ceph if explicitly allowed
+
+- name: Query Ceph pools
+  ansible.builtin.command: ceph osd pool ls detail --format json
+  register: proxmox_lockdowns_ceph_pools
+  changed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_ceph_pool_policy_audit | bool
+
+- name: Enforce minimum Ceph replica policy as an audit gate
+  ansible.builtin.assert:
+    that:
+      - item.size | int >= proxmox_lockdowns_ceph_size | int
+      - item.min_size | int >= proxmox_lockdowns_ceph_min_size | int
+    fail_msg: >-
+      Pool {{ item.pool_name }} has size={{ item.size }}, min_size={{ item.min_size }};
+      changing a live pool is intentionally manual.
+  loop: "{{ proxmox_lockdowns_ceph_pools.stdout | from_json }}"
+  when: proxmox_lockdowns_ceph_pool_policy_audit | bool

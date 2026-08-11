@@ -1,0 +1,25 @@
+---
+- name: Install Proxmox lockdown sysctl drop-in
+  ansible.builtin.template:
+    src: sysctl_proxmox_lockdowns.conf.j2
+    dest: /etc/sysctl.d/60-proxmox-lockdowns.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when: proxmox_lockdowns_apply_sysctl | bool
+  notify: Apply sysctl safely
+
+- name: Install SDN sysctl drop-in
+  ansible.builtin.template:
+    src: sysctl_pve_sdn.conf.j2
+    dest: /etc/sysctl.d/20-pve-sdn.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when:
+    - proxmox_lockdowns_apply_networking | bool
+    - proxmox_lockdowns_apply_sdn_sysctl | bool
+    - proxmox_lockdowns_load_br_netfilter | bool
+  notify: Apply sysctl safely

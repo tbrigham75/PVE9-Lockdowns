@@ -1,0 +1,53 @@
+---
+- name: Reload SSH safely
+  ansible.builtin.systemd_service:
+    name: ssh.service
+    state: reloaded
+
+- name: Apply sysctl safely
+  ansible.builtin.command: sysctl --system
+  changed_when: true
+
+- name: Load audit rules
+  ansible.builtin.command: augenrules --load
+  changed_when: true
+
+- name: Reload rsyslog
+  ansible.builtin.systemd_service:
+    name: rsyslog.service
+    state: reloaded
+
+- name: Reload fail2ban
+  ansible.builtin.systemd_service:
+    name: fail2ban.service
+    state: reloaded
+
+- name: Reload PVE firewall
+  ansible.builtin.systemd_service:
+    name: pve-firewall.service
+    state: reloaded
+
+- name: Reload pveproxy
+  ansible.builtin.systemd_service:
+    name: pveproxy.service
+    state: reloaded
+
+- name: Restart Ceph if explicitly allowed
+  ansible.builtin.systemd_service:
+    name: ceph.target
+    state: restarted
+  when: proxmox_lockdowns_ceph_restart_allowed | bool
+
+- name: Update GRUB
+  ansible.builtin.command: update-grub
+  changed_when: true
+
+- name: Reload systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Report reboot required
+  ansible.builtin.debug:
+    msg: >-
+      A reboot is required to activate microcode/kernel changes. This role never reboots;
+      policy={{ proxmox_lockdowns_reboot_policy }}. Schedule and verify manually.

@@ -1,0 +1,39 @@
+---
+- name: Manage Debian trixie repository definition
+  ansible.builtin.template:
+    src: debian.sources.j2
+    dest: /etc/apt/sources.list.d/debian.sources
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when: proxmox_lockdowns_manage_repositories | bool
+  register: proxmox_lockdowns_debian_repo
+
+- name: Manage Proxmox repository definition
+  ansible.builtin.template:
+    src: pve.sources.j2
+    dest: /etc/apt/sources.list.d/pve-managed.sources
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when:
+    - proxmox_lockdowns_manage_repositories | bool
+    - proxmox_lockdowns_repository_subscription != 'none'
+  register: proxmox_lockdowns_pve_repo
+
+- name: Warn that legacy repository files are not removed
+  ansible.builtin.debug:
+    msg: >-
+      Safety measure: this role writes pve-managed.sources but does not remove or disable
+      other repository files. Review apt-cache policy and remove duplicates manually.
+  when: proxmox_lockdowns_manage_repositories | bool
+
+- name: Refresh APT cache after repository changes
+  ansible.builtin.apt:
+    update_cache: true
+  when:
+    - not ansible_check_mode
+    - (proxmox_lockdowns_debian_repo.changed | default(false)) or
+      (proxmox_lockdowns_pve_repo.changed | default(false))

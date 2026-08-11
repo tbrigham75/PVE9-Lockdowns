@@ -1,0 +1,50 @@
+# {{ proxmox_lockdowns_managed_marker }}
+Port {{ proxmox_lockdowns_ssh_port }}
+PubkeyAuthentication {{ proxmox_lockdowns_ssh_pubkey_authentication | ternary('yes', 'no') }}
+{% if proxmox_lockdowns_ssh_permit_root_login | length > 0 %}
+PermitRootLogin {{ proxmox_lockdowns_ssh_permit_root_login }}
+{% endif %}
+{% if proxmox_lockdowns_ssh_password_authentication != '' %}
+PasswordAuthentication {{ proxmox_lockdowns_ssh_password_authentication | bool | ternary('yes', 'no') }}
+{% endif %}
+X11Forwarding no
+AllowAgentForwarding no
+PermitTunnel no
+{% if proxmox_lockdowns_ssh_disable_forwarding | bool %}
+DisableForwarding yes
+{% endif %}
+{% if proxmox_lockdowns_ssh_manage_crypto_profile | bool %}
+{% if proxmox_lockdowns_ssh_kex_algorithms | length > 0 %}
+KexAlgorithms {{ proxmox_lockdowns_ssh_kex_algorithms }}
+{% endif %}
+{% if proxmox_lockdowns_ssh_ciphers | length > 0 %}
+Ciphers {{ proxmox_lockdowns_ssh_ciphers }}
+{% endif %}
+{% if proxmox_lockdowns_ssh_macs | length > 0 %}
+MACs {{ proxmox_lockdowns_ssh_macs }}
+{% endif %}
+{% endif %}
+{% if proxmox_lockdowns_root_match_management_networks | length > 0 %}
+
+# Preserve clustered root workflows only from explicitly trusted networks.
+Match User root Address {{ proxmox_lockdowns_root_match_management_networks | join(',') }}
+  PermitRootLogin yes
+{% if proxmox_lockdowns_ssh_disable_forwarding | bool %}
+  DisableForwarding no
+  AllowTcpForwarding yes
+{% endif %}
+  X11Forwarding no
+  AllowAgentForwarding no
+  PermitTunnel no
+Match all
+{% endif %}
+{% if proxmox_lockdowns_ssh_disable_forwarding | bool and proxmox_lockdowns_cluster_ssh_networks | length > 0 %}
+
+Match User root Address {{ proxmox_lockdowns_cluster_ssh_networks | join(',') }}
+  DisableForwarding no
+  AllowTcpForwarding yes
+  X11Forwarding no
+  AllowAgentForwarding no
+  PermitTunnel no
+Match all
+{% endif %}

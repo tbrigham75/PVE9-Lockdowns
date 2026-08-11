@@ -1,0 +1,16 @@
+---
+dependency:
+  name: galaxy
+driver:
+  name: delegated
+platforms:
+  - name: pve9-lab
+    groups:
+      - proxmox
+provisioner:
+  name: ansible
+  inventory:
+    links:
+      hosts: ${MOLECULE_INVENTORY_FILE}
+verifier:
+  name: ansible

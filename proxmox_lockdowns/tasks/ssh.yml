@@ -1,0 +1,47 @@
+---
+- name: Validate SSH port and root Match networks
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_ssh_port | int >= 1
+      - proxmox_lockdowns_ssh_port | int <= 65535
+      - proxmox_lockdowns_ssh_permit_root_login in ['', 'yes', 'prohibit-password', 'no']
+      - proxmox_lockdowns_ssh_password_authentication in ['', true, false]
+    fail_msg: Invalid SSH safety variable.
+  when: proxmox_lockdowns_apply_ssh | bool
+
+- name: Install hardened SSH server drop-in
+  ansible.builtin.template:
+    src: sshd_config_lockdowns.conf.j2
+    dest: /etc/ssh/sshd_config.d/00-proxmox-lockdowns.conf
+    owner: root
+    group: root
+    mode: '0600'
+    backup: "{{ proxmox_lockdowns_backup }}"
+    validate: /usr/sbin/sshd -t -f %s
+  when: proxmox_lockdowns_apply_ssh | bool
+  notify: Reload SSH safely
+
+- name: Ensure root SSH directory exists for cluster client policy
+  ansible.builtin.file:
+    path: /root/.ssh
+    state: directory
+    owner: root
+    group: root
+    mode: '0700'
+  when: proxmox_lockdowns_manage_cluster_ssh_client | bool
+
+- name: Manage cluster peer SSH client RSA preference
+  ansible.builtin.blockinfile:
+    path: /root/.ssh/config
+    create: true
+    owner: root
+    group: root
+    mode: '0600'
+    marker: '# {mark} ANSIBLE PROXMOX CLUSTER PEERS'
+    block: |
+      Host {{ proxmox_lockdowns_cluster_ssh_host_patterns | join(' ') }}
+        HostKeyAlgorithms rsa-sha2-512,rsa-sha2-256
+        PubkeyAcceptedAlgorithms rsa-sha2-512,rsa-sha2-256
+  when:
+    - proxmox_lockdowns_manage_cluster_ssh_client | bool
+    - proxmox_lockdowns_cluster_ssh_host_patterns | length > 0

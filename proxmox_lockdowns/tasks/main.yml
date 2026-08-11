@@ -1,0 +1,92 @@
+---
+- name: Run Proxmox lockdown preflight
+  ansible.builtin.import_tasks: preflight.yml
+  tags: [always, preflight]
+
+- name: Apply package controls
+  ansible.builtin.import_tasks: packages.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [packages]
+
+- name: Apply repository controls
+  ansible.builtin.import_tasks: apt_repositories.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [packages, repositories]
+
+- name: Apply kernel and boot controls
+  ansible.builtin.import_tasks: kernel_and_boot.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [kernel]
+
+- name: Apply filesystem controls
+  ansible.builtin.import_tasks: filesystem.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [filesystem]
+
+- name: Apply account and authentication controls
+  ansible.builtin.import_tasks: accounts_and_auth.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [accounts, pve]
+
+- name: Apply SSH controls
+  ansible.builtin.import_tasks: ssh.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [ssh]
+
+- name: Apply network controls
+  ansible.builtin.import_tasks: networking.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [networking]
+
+- name: Apply firewall controls
+  ansible.builtin.import_tasks: firewall.yml
+  when:
+    - proxmox_lockdowns_enable | bool
+    - proxmox_lockdowns_apply_firewall | bool
+  tags: [firewall]
+
+- name: Apply sysctl controls
+  ansible.builtin.import_tasks: sysctl.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [sysctl]
+
+- name: Apply audit and logging controls
+  ansible.builtin.import_tasks: audit_logging.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [audit, logging]
+
+- name: Apply scheduled checks and auxiliary service controls
+  ansible.builtin.import_tasks: cron_and_services.yml
+  when: proxmox_lockdowns_enable | bool
+  tags: [services, audit]
+
+- name: Apply certificate controls
+  ansible.builtin.import_tasks: certificates.yml
+  when:
+    - proxmox_lockdowns_enable | bool
+    - proxmox_lockdowns_apply_certificates | bool
+  tags: [certificates]
+
+- name: Apply Proxmox-specific controls
+  ansible.builtin.import_tasks: proxmox.yml
+  when:
+    - proxmox_lockdowns_enable | bool
+    - proxmox_lockdowns_apply_proxmox | bool
+  tags: [pve]
+
+- name: Apply Ceph controls
+  ansible.builtin.import_tasks: ceph.yml
+  when:
+    - proxmox_lockdowns_enable | bool
+    - proxmox_lockdowns_apply_ceph | bool
+  tags: [ceph]
+
+- name: Verify hardening state
+  ansible.builtin.import_tasks: verification.yml
+  when: proxmox_lockdowns_run_verification | bool
+  tags: [verify]
+
+- name: Emit manual review report
+  ansible.builtin.import_tasks: manual_review.yml
+  when: proxmox_lockdowns_emit_manual_review | bool
+  tags: [manual]

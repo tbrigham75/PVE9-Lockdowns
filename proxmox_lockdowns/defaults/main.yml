@@ -1,0 +1,156 @@
+---
+# Master switch. A false value performs preflight and manual reporting only.
+proxmox_lockdowns_enable: false
+proxmox_lockdowns_backup: true
+proxmox_lockdowns_reboot_policy: never  # never | notify
+
+# Base OS and packages
+proxmox_lockdowns_apply_packages: true
+proxmox_lockdowns_apply_unattended_upgrades: true
+proxmox_lockdowns_unattended_origins:
+  - 'origin=Debian,codename=${distro_codename},label=Debian'
+  - 'origin=Debian,codename=${distro_codename}-security,label=Debian-Security'
+  - 'origin=Debian,codename=${distro_codename},label=Debian-Security'
+proxmox_lockdowns_unattended_mail: ""
+proxmox_lockdowns_install_microcode: true
+proxmox_lockdowns_manage_repositories: false
+proxmox_lockdowns_repository_subscription: none  # none | enterprise | no-subscription
+proxmox_lockdowns_enable_non_free_firmware: false
+proxmox_lockdowns_debian_mirror: https://deb.debian.org/debian
+proxmox_lockdowns_debian_security_mirror: https://security.debian.org/debian-security
+
+# Boot and filesystems: disruptive controls are opt-in.
+proxmox_lockdowns_apply_kernel_lockdown: false
+proxmox_lockdowns_confirm_secure_boot: false
+proxmox_lockdowns_kernel_lockdown_mode: integrity
+proxmox_lockdowns_manage_vz_mount: false
+proxmox_lockdowns_vz_mount_source: ""
+proxmox_lockdowns_vz_mount_fstype: xfs
+proxmox_lockdowns_vz_mount_options: defaults,discard,nodev,nosuid
+
+# Authentication and PVE RBAC
+proxmox_lockdowns_apply_accounts: false
+proxmox_lockdowns_pve_users: []
+# Each user: { userid, comment, role, path, enable, expire }
+proxmox_lockdowns_pve_acls: []
+# Each ACL: { path, user, role, propagate }
+proxmox_lockdowns_manage_realm_tfa: false
+proxmox_lockdowns_tfa_realms: []
+# Human enrollment and break-glass custody remain manual.
+
+# SSH. Safe defaults preserve current root/password behavior.
+proxmox_lockdowns_apply_ssh: false
+proxmox_lockdowns_ssh_port: 22
+proxmox_lockdowns_ssh_permit_root_login: ""  # unchanged unless set: yes|prohibit-password|no
+proxmox_lockdowns_ssh_password_authentication: ""  # unchanged unless true/false
+proxmox_lockdowns_ssh_pubkey_authentication: true
+proxmox_lockdowns_ssh_disable_forwarding: false
+proxmox_lockdowns_cluster_ssh_networks: []
+proxmox_lockdowns_root_match_management_networks: []
+proxmox_lockdowns_ssh_manage_crypto_profile: false
+proxmox_lockdowns_ssh_kex_algorithms: ""
+proxmox_lockdowns_ssh_ciphers: ""
+proxmox_lockdowns_ssh_macs: ""
+proxmox_lockdowns_manage_cluster_ssh_client: false
+proxmox_lockdowns_cluster_ssh_host_patterns: []
+
+# Network/SDN. Network topology changes remain manual.
+proxmox_lockdowns_apply_networking: false
+proxmox_lockdowns_apply_sdn_sysctl: false
+proxmox_lockdowns_load_br_netfilter: false
+
+# PVE firewall. Requires explicit takeover and trusted CIDRs.
+proxmox_lockdowns_apply_firewall: false
+proxmox_lockdowns_firewall_takeover: false
+proxmox_lockdowns_firewall_enable: false
+proxmox_lockdowns_firewall_default_input_policy: ACCEPT
+proxmox_lockdowns_firewall_default_output_policy: ACCEPT
+proxmox_lockdowns_firewall_default_forward_policy: ACCEPT
+proxmox_lockdowns_firewall_enable_nftables: false
+proxmox_lockdowns_trusted_management_networks: []
+proxmox_lockdowns_pve_gui_port: 8006
+proxmox_lockdowns_firewall_additional_rules: []
+# Rules are literal PVE firewall rule lines, reviewed by the operator.
+
+# Sysctl (non-SDN baseline only; settings are individually configurable).
+proxmox_lockdowns_apply_sysctl: true
+proxmox_lockdowns_sysctl_values:
+  kernel.kptr_restrict: 2
+  kernel.dmesg_restrict: 1
+  kernel.yama.ptrace_scope: 1
+  fs.protected_hardlinks: 1
+  fs.protected_symlinks: 1
+  net.ipv4.conf.all.accept_redirects: 0
+  net.ipv4.conf.default.accept_redirects: 0
+  net.ipv4.conf.all.send_redirects: 0
+  net.ipv4.conf.default.send_redirects: 0
+  net.ipv4.conf.all.accept_source_route: 0
+  net.ipv4.conf.default.accept_source_route: 0
+  net.ipv6.conf.all.accept_redirects: 0
+  net.ipv6.conf.default.accept_redirects: 0
+proxmox_lockdowns_sdn_sysctl_values:
+  net.bridge.bridge-nf-call-iptables: 1
+  net.bridge.bridge-nf-call-ip6tables: 1
+  net.bridge.bridge-nf-filter-vlan-tagged: 1
+  net.ipv4.ip_forward: 0
+  net.ipv6.conf.all.forwarding: 0
+  net.ipv6.conf.default.forwarding: 0
+  net.ipv4.conf.all.proxy_arp: 0
+  net.ipv4.conf.default.proxy_arp: 0
+
+# Audit, logging, monitoring, and scheduled checks.
+proxmox_lockdowns_apply_auditd: true
+proxmox_lockdowns_apply_central_logging: false
+proxmox_lockdowns_rsyslog_target: ""
+proxmox_lockdowns_rsyslog_port: 6514
+proxmox_lockdowns_rsyslog_protocol: tcp
+proxmox_lockdowns_apply_rkhunter: false
+proxmox_lockdowns_apply_fail2ban: false
+proxmox_lockdowns_fail2ban_maxretry: 3
+proxmox_lockdowns_fail2ban_findtime: 2h
+proxmox_lockdowns_fail2ban_bantime: 1h
+
+# Proxmox controls.
+proxmox_lockdowns_apply_proxmox: false
+proxmox_lockdowns_ksm_policy: unchanged  # unchanged | disable
+proxmox_lockdowns_disable_ksm_for_existing_vms: false
+proxmox_lockdowns_cluster_mode: auto  # auto | standalone | cluster
+proxmox_lockdowns_manage_corosync_secauth: false
+# Corosync file mutation is deliberately not implemented; this enables audit only.
+
+# Certificates: choose none, files, or acme.
+proxmox_lockdowns_apply_certificates: false
+proxmox_lockdowns_certificate_mode: none
+proxmox_lockdowns_certificate_fullchain_src: ""
+proxmox_lockdowns_certificate_private_key_src: ""
+proxmox_lockdowns_acme_account: default
+proxmox_lockdowns_acme_email: ""
+proxmox_lockdowns_acme_directory: ""
+proxmox_lockdowns_acme_domain: ""
+proxmox_lockdowns_acme_plugin: ""
+
+# Ceph. Never touched unless both flags are true and Ceph is detected.
+proxmox_lockdowns_apply_ceph: false
+proxmox_lockdowns_ceph_enabled: false
+proxmox_lockdowns_ceph_manage_messenger_encryption: false
+proxmox_lockdowns_ceph_restart_allowed: false
+proxmox_lockdowns_ceph_expected_public_network: ""
+proxmox_lockdowns_ceph_expected_cluster_network: ""
+proxmox_lockdowns_ceph_pool_policy_audit: true
+proxmox_lockdowns_ceph_min_size: 2
+proxmox_lockdowns_ceph_size: 3
+
+# Optional host-configuration backup to PBS.
+proxmox_lockdowns_manage_host_backup: false
+proxmox_lockdowns_pbs_repository: ""
+proxmox_lockdowns_pbs_password: ""
+proxmox_lockdowns_pbs_fingerprint: ""
+proxmox_lockdowns_pbs_backup_calendar: "*-*-* 06:00:00"
+proxmox_lockdowns_pbs_encryption_enabled: false
+proxmox_lockdowns_pbs_encryption_key_file: /root/.pbs-enc-key.json
+proxmox_lockdowns_pbs_encryption_password: ""
+proxmox_lockdowns_pbs_manage_encryption_key: false
+
+# Verification/reporting
+proxmox_lockdowns_run_verification: true
+proxmox_lockdowns_emit_manual_review: true

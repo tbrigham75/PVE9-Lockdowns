@@ -1,0 +1,91 @@
+---
+- name: Query existing PVE users
+  ansible.builtin.command: pveum user list --output-format json
+  register: proxmox_lockdowns_existing_users_raw
+  changed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_apply_accounts | bool
+
+- name: Parse existing PVE users
+  ansible.builtin.set_fact:
+    proxmox_lockdowns_existing_userids: >-
+      {{ (proxmox_lockdowns_existing_users_raw.stdout | from_json) | map(attribute='userid') | list }}
+  when: proxmox_lockdowns_apply_accounts | bool
+
+- name: Create declared personalized PVE users
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - user
+      - add
+      - "{{ item.userid }}"
+      - --comment
+      - "{{ item.comment | default('Managed administrator') }}"
+      - --enable
+      - "{{ (item.enable | default(true) | bool) | ternary(1, 0) }}"
+  loop: "{{ proxmox_lockdowns_pve_users }}"
+  when:
+    - proxmox_lockdowns_apply_accounts | bool
+    - item.userid not in proxmox_lockdowns_existing_userids
+  no_log: false
+
+- name: Query current PVE ACLs
+  ansible.builtin.command: pveum acl list --output-format json
+  register: proxmox_lockdowns_existing_acls
+  changed_when: false
+  check_mode: false
+  when:
+    - proxmox_lockdowns_apply_accounts | bool
+    - proxmox_lockdowns_pve_acls | length > 0
+
+- name: Build current PVE ACL identity set
+  ansible.builtin.set_fact:
+    proxmox_lockdowns_existing_acl_keys: >-
+      {{ (proxmox_lockdowns_existing_acl_keys | default([])) +
+         [item.path ~ '|' ~ (item.ugid | default(item.user | default(''))) ~ '|' ~
+          (item.roleid | default(item.role | default('')))] }}
+  loop: "{{ proxmox_lockdowns_existing_acls.stdout | from_json }}"
+  when:
+    - proxmox_lockdowns_apply_accounts | bool
+    - proxmox_lockdowns_pve_acls | length > 0
+
+- name: Apply declared least-privilege ACLs
+  ansible.builtin.command:
+    argv:
+      - pveum
+      - acl
+      - modify
+      - "{{ item.path }}"
+      - --user
+      - "{{ item.user }}"
+      - --role
+      - "{{ item.role }}"
+      - --propagate
+      - "{{ (item.propagate | default(true) | bool) | ternary(1, 0) }}"
+  loop: "{{ proxmox_lockdowns_pve_acls }}"
+  register: proxmox_lockdowns_acl_changes
+  changed_when: true
+  when:
+    - proxmox_lockdowns_apply_accounts | bool
+    - item.path ~ '|' ~ item.user ~ '|' ~ item.role not in
+      (proxmox_lockdowns_existing_acl_keys | default([]))
+
+- name: Query PVE realms before TFA policy changes
+  ansible.builtin.command: pveum realm list --output-format json
+  register: proxmox_lockdowns_existing_realms
+  changed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_manage_realm_tfa | bool
+
+- name: Configure realm TFA policy
+  ansible.builtin.command:
+    argv: [pveum, realm, modify, "{{ item.realm }}", --tfa, "type={{ item.type }}"]
+  loop: "{{ proxmox_lockdowns_tfa_realms }}"
+  when:
+    - proxmox_lockdowns_manage_realm_tfa | bool
+    - not ansible_check_mode
+    - >-
+      (proxmox_lockdowns_existing_realms.stdout | from_json |
+       selectattr('realm', 'equalto', item.realm) | map(attribute='tfa') | first | default(''))
+      != 'type=' ~ item.type
+  changed_when: true

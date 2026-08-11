@@ -1,0 +1,11 @@
+# {{ proxmox_lockdowns_managed_marker }}
+[Unit]
+Description=Daily host-config backups
+
+[Timer]
+OnCalendar={{ proxmox_lockdowns_pbs_backup_calendar }}
+Persistent=true
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target

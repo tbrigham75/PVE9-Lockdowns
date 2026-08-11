@@ -1,0 +1,20 @@
+---
+- name: Install bridge netfilter boot-load configuration
+  ansible.builtin.copy:
+    content: "# {{ proxmox_lockdowns_managed_marker }}\nbr_netfilter\n"
+    dest: /etc/modules-load.d/pve-bridge.conf
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when:
+    - proxmox_lockdowns_apply_networking | bool
+    - proxmox_lockdowns_load_br_netfilter | bool
+
+- name: Load bridge netfilter module
+  community.general.modprobe:
+    name: br_netfilter
+    state: present
+  when:
+    - proxmox_lockdowns_apply_networking | bool
+    - proxmox_lockdowns_load_br_netfilter | bool

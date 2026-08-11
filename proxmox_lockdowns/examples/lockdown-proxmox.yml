@@ -1,0 +1,13 @@
+---
+- name: Apply Proxmox VE 9 lockdowns conservatively
+  hosts: proxmox
+  become: true
+  gather_facts: true
+  serial: 1
+  roles:
+    - role: proxmox_lockdowns
+      vars:
+        proxmox_lockdowns_enable: true
+        proxmox_lockdowns_apply_firewall: false
+        proxmox_lockdowns_apply_ssh: false
+        proxmox_lockdowns_apply_ceph: false

@@ -1,0 +1,14 @@
+# {{ proxmox_lockdowns_managed_marker }}
+Types: deb
+URIs: https://enterprise.proxmox.com/debian/pve
+Suites: trixie
+Components: pve-enterprise
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+Enabled: {{ (proxmox_lockdowns_repository_subscription == 'enterprise') | ternary('yes', 'no') }}
+
+Types: deb
+URIs: http://download.proxmox.com/debian/pve
+Suites: trixie
+Components: pve-no-subscription
+Signed-By: /usr/share/keyrings/proxmox-archive-keyring.gpg
+Enabled: {{ (proxmox_lockdowns_repository_subscription == 'no-subscription') | ternary('yes', 'no') }}

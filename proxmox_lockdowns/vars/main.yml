@@ -1,0 +1,6 @@
+---
+proxmox_lockdowns_supported_distribution: Debian
+proxmox_lockdowns_supported_major_version: "13"
+proxmox_lockdowns_supported_codename: trixie
+proxmox_lockdowns_pve_major_version: "9"
+proxmox_lockdowns_managed_marker: "Managed by Ansible role proxmox_lockdowns"

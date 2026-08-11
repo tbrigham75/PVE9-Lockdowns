@@ -1,0 +1,7 @@
+PBS_REPOSITORY="{{ proxmox_lockdowns_pbs_repository }}"
+PBS_PASSWORD="{{ proxmox_lockdowns_pbs_password }}"
+PBS_FINGERPRINT="{{ proxmox_lockdowns_pbs_fingerprint }}"
+{% if proxmox_lockdowns_pbs_encryption_enabled | bool %}
+PBS_ENCRYPTION_KEY_FILE="{{ proxmox_lockdowns_pbs_encryption_key_file }}"
+PBS_ENCRYPTION_PASSWORD="{{ proxmox_lockdowns_pbs_encryption_password }}"
+{% endif %}

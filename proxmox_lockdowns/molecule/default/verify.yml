@@ -1,0 +1,31 @@
+---
+- name: Verify delegated PVE 9 lab node
+  hosts: all
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Query PVE version
+      ansible.builtin.command: pveversion
+      register: molecule_pveversion
+      changed_when: false
+
+    - name: Verify PVE 9
+      ansible.builtin.assert:
+        that: molecule_pveversion.stdout is regex('^pve-manager/9\\.')
+
+    - name: Check unattended upgrades
+      ansible.builtin.command: systemctl is-enabled unattended-upgrades.service
+      register: molecule_unattended
+      changed_when: false
+
+    - name: Verify persistent audit rule file
+      ansible.builtin.stat:
+        path: /etc/audit/rules.d/90-pve.rules
+      register: molecule_audit_rule
+
+    - name: Assert baseline state
+      ansible.builtin.assert:
+        that:
+          - molecule_unattended.stdout == 'enabled'
+          - molecule_audit_rule.stat.exists
+          - molecule_audit_rule.stat.mode == '0640'

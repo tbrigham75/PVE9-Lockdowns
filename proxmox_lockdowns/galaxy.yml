@@ -1,0 +1,16 @@
+---
+namespace: homesec
+name: proxmox_lockdowns
+version: 2.0.0
+readme: README.md
+authors:
+  - Security Engineering Team
+description: Conservative lockdown controls for Proxmox VE 9 on Debian 13.
+license:
+  - MIT
+tags:
+  - proxmox
+  - debian
+  - security
+  - lockdown
+repository: https://github.com/HomeSecExplorer/Proxmox-Hardening-Guide

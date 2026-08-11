@@ -1,0 +1,64 @@
+---
+- name: Install unattended-upgrades packages
+  ansible.builtin.apt:
+    name:
+      - unattended-upgrades
+      - apt-listchanges
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+  when:
+    - proxmox_lockdowns_apply_packages | bool
+    - proxmox_lockdowns_apply_unattended_upgrades | bool
+
+- name: Configure periodic APT activity
+  ansible.builtin.template:
+    src: 20auto-upgrades.j2
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when:
+    - proxmox_lockdowns_apply_packages | bool
+    - proxmox_lockdowns_apply_unattended_upgrades | bool
+
+- name: Configure unattended security upgrades
+  ansible.builtin.template:
+    src: 52proxmox-lockdowns-unattended-upgrades.j2
+    dest: /etc/apt/apt.conf.d/52proxmox-lockdowns-unattended-upgrades
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when:
+    - proxmox_lockdowns_apply_packages | bool
+    - proxmox_lockdowns_apply_unattended_upgrades | bool
+
+- name: Enable unattended-upgrades service
+  ansible.builtin.systemd_service:
+    name: unattended-upgrades.service
+    enabled: true
+    state: started
+  when:
+    - proxmox_lockdowns_apply_packages | bool
+    - proxmox_lockdowns_apply_unattended_upgrades | bool
+
+- name: Select CPU microcode package
+  ansible.builtin.set_fact:
+    proxmox_lockdowns_microcode_package: >-
+      {{ 'intel-microcode' if ansible_facts.processor | join(' ') is search('GenuineIntel')
+         else ('amd64-microcode' if ansible_facts.processor | join(' ') is search('AuthenticAMD') else '') }}
+  when:
+    - proxmox_lockdowns_apply_packages | bool
+    - proxmox_lockdowns_install_microcode | bool
+
+- name: Install CPU microcode
+  ansible.builtin.apt:
+    name: "{{ proxmox_lockdowns_microcode_package }}"
+    state: present
+  when:
+    - proxmox_lockdowns_apply_packages | bool
+    - proxmox_lockdowns_install_microcode | bool
+    - proxmox_lockdowns_microcode_package | default('') | length > 0
+  notify: Report reboot required

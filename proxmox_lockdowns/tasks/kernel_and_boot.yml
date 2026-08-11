@@ -1,0 +1,31 @@
+---
+- name: Validate Secure Boot before kernel lockdown
+  ansible.builtin.command: mokutil --sb-state
+  register: proxmox_lockdowns_secure_boot_state
+  changed_when: false
+  failed_when: false
+  check_mode: false
+  when: proxmox_lockdowns_apply_kernel_lockdown | bool
+
+- name: Require explicit Secure Boot confirmation
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_confirm_secure_boot | bool
+      - proxmox_lockdowns_secure_boot_state.stdout is search('SecureBoot enabled')
+    fail_msg: Kernel lockdown requires confirmed and detected UEFI Secure Boot.
+  when: proxmox_lockdowns_apply_kernel_lockdown | bool
+
+- name: Add kernel lockdown GRUB parameter
+  ansible.builtin.lineinfile:
+    path: /etc/default/grub.d/99-proxmox-lockdowns.cfg
+    regexp: '^GRUB_CMDLINE_LINUX_DEFAULT='
+    line: 'GRUB_CMDLINE_LINUX_DEFAULT="$GRUB_CMDLINE_LINUX_DEFAULT lockdown={{ proxmox_lockdowns_kernel_lockdown_mode }}"'
+    create: true
+    owner: root
+    group: root
+    mode: '0644'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when: proxmox_lockdowns_apply_kernel_lockdown | bool
+  notify:
+    - Update GRUB
+    - Report reboot required

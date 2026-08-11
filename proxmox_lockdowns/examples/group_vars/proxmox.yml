@@ -1,0 +1,30 @@
+---
+proxmox_lockdowns_enable: true
+proxmox_lockdowns_cluster_mode: auto
+
+proxmox_lockdowns_apply_ssh: true
+proxmox_lockdowns_ssh_port: 22
+proxmox_lockdowns_ssh_permit_root_login: prohibit-password
+proxmox_lockdowns_ssh_password_authentication: false
+proxmox_lockdowns_cluster_ssh_networks:
+  - 10.10.0.0/24
+  - 10.20.0.0/24
+proxmox_lockdowns_root_match_management_networks:
+  - 10.10.0.0/24
+
+# Keep disabled until console/OOB access is confirmed and the complete policy is modeled.
+proxmox_lockdowns_apply_firewall: false
+proxmox_lockdowns_firewall_takeover: false
+proxmox_lockdowns_firewall_enable: false
+proxmox_lockdowns_trusted_management_networks:
+  - 10.10.0.0/24
+proxmox_lockdowns_firewall_additional_rules:
+  - 'IN ACCEPT -source 10.20.0.0/24 -p udp -dport 5405:5412 -log nolog'
+
+proxmox_lockdowns_apply_auditd: true
+proxmox_lockdowns_apply_sysctl: true
+proxmox_lockdowns_apply_fail2ban: true
+proxmox_lockdowns_manage_repositories: false
+proxmox_lockdowns_apply_certificates: false
+proxmox_lockdowns_apply_ceph: false
+proxmox_lockdowns_ceph_enabled: false

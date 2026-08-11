@@ -1,0 +1,12 @@
+# {{ proxmox_lockdowns_managed_marker }}
+# Forward all host messages, including pveproxy/API/sudo and /var/log/pve* producers.
+action(
+  type="omfwd"
+  target="{{ proxmox_lockdowns_rsyslog_target }}"
+  port="{{ proxmox_lockdowns_rsyslog_port }}"
+  protocol="{{ proxmox_lockdowns_rsyslog_protocol }}"
+  action.resumeRetryCount="-1"
+  queue.type="linkedList"
+  queue.filename="proxmox_lockdowns"
+  queue.saveOnShutdown="on"
+)

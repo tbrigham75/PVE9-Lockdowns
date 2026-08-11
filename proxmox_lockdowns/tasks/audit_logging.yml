@@ -1,0 +1,45 @@
+---
+- name: Install auditd
+  ansible.builtin.apt:
+    name: auditd
+    state: present
+  when: proxmox_lockdowns_apply_auditd | bool
+
+- name: Install persistent PVE audit rules
+  ansible.builtin.template:
+    src: auditd_proxmox_lockdowns.rules.j2
+    dest: /etc/audit/rules.d/90-pve.rules
+    owner: root
+    group: root
+    mode: '0640'
+    backup: "{{ proxmox_lockdowns_backup }}"
+  when: proxmox_lockdowns_apply_auditd | bool
+  notify: Load audit rules
+
+- name: Enable auditd
+  ansible.builtin.systemd_service:
+    name: auditd.service
+    enabled: true
+    state: started
+  when: proxmox_lockdowns_apply_auditd | bool
+
+- name: Validate centralized logging input
+  ansible.builtin.assert:
+    that:
+      - proxmox_lockdowns_rsyslog_target | length > 0
+      - proxmox_lockdowns_rsyslog_protocol in ['tcp', 'udp']
+      - proxmox_lockdowns_rsyslog_port | int > 0
+    fail_msg: Central logging requires a target, tcp/udp protocol, and valid port.
+  when: proxmox_lockdowns_apply_central_logging | bool
+
+- name: Install rsyslog forwarding policy for PVE logs
+  ansible.builtin.template:
+    src: rsyslog_pve_forwarding.conf.j2
+    dest: /etc/rsyslog.d/60-proxmox-lockdowns.conf
+    owner: root
+    group: root
+    mode: '0640'
+    backup: "{{ proxmox_lockdowns_backup }}"
+    validate: /usr/sbin/rsyslogd -N1 -f %s
+  when: proxmox_lockdowns_apply_central_logging | bool
+  notify: Reload rsyslog
