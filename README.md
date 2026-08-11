@@ -6,12 +6,14 @@ The role is conservative: `proxmox_lockdowns_enable` defaults to `false`; SSH, f
 
 ## Authoritative source
 
-This role is derived from **“Proxmox VE 9.x Hardening Guide,” Version 0.9.2 - February 09, 2026**, authored by [HomeSecExplorer](https://github.com/HomeSecExplorer).
+This role adapts **“Proxmox VE 9.x Hardening Guide,” Version 0.9.2 - February 09, 2026** by [HomeSecExplorer](https://github.com/HomeSecExplorer), used under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Changes were made to translate and extend the guidance into an Ansible role. HomeSecExplorer does not endorse this project or its use.
 
 - Local source snapshot: [`source-pve9-lockdown-guide.md`](source-pve9-lockdown-guide.md)
 - Upstream rendered guide: <https://github.com/HomeSecExplorer/Proxmox-Hardening-Guide/blob/main/docs/pve9-hardening-guide.md>
 - Upstream raw guide used for the snapshot: <https://raw.githubusercontent.com/HomeSecExplorer/Proxmox-Hardening-Guide/main/docs/pve9-hardening-guide.md>
-- Upstream license: [CC BY 4.0](https://github.com/HomeSecExplorer/Proxmox-Hardening-Guide/blob/main/LICENSE)
+- License: <https://creativecommons.org/licenses/by/4.0/>
+
+Unless otherwise noted, the original role code in this repository is licensed under MIT. The included `source-pve9-lockdown-guide.md` snapshot remains attributed to HomeSecExplorer and is available under CC BY 4.0; nothing in this repository limits the permissions granted by that license.
 
 The complete 1,948-line raw guide was reviewed. Controls 1.1.7 and 1.1.8 are present in the body but absent from its table of contents; both are mapped below. Extra sysctl values and safety assertions are labeled implementation safeguards, not guide requirements.
 
